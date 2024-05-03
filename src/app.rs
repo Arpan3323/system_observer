@@ -1,3 +1,4 @@
+/*
 pub enum CurrentScreen{
 	ProcessList,
 	CpuMetrics,
@@ -19,3 +20,5 @@ impl App {
 	
 	
 }
+
+*/

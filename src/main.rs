@@ -1,7 +1,11 @@
 mod processes;
 fn main()
 {
-	let all_procs: Vec<(u32, String)> = processes::get_all_procs();
+	let proc_list = processes::Processes::new();
+        for i in proc_list.all_procs
+        {
+            println!("{:?}", i)
+        }
 	/*
 	let mut s = System::new_with_specifics(
 	    RefreshKind::new().with_cpu(CpuRefreshKind::everything()),
