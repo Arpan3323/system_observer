@@ -7,11 +7,11 @@ use std::collections::BinaryHeap;
 #[derive(Debug)]
 pub struct Process
 {
-    name: String,
-    pid: u32,
-    status: String,
-    memory_usage: u64,
-    cpu_usage: f32,
+    pub name: String,
+    pub pid: u32,
+    pub status: String,
+    pub memory_usage: u64,
+    pub cpu_usage: f32,
 }
 
 pub struct Processes 
