@@ -42,12 +42,13 @@ impl Processes {
                 name: process.name().to_string(),
                 pid: pid.as_u32(),
                 status: process.status().to_string(),
-                memory_usage: process.memory(),
+                memory_usage: process.memory() / 1000000,
                 cpu_usage: process.cpu_usage(),
             };
             all_procs.push(curr_proc);
         }
         
+        //all_procs.sort_by(|a,b|b.cmp(a));
         all_procs
     }
 }
