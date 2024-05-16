@@ -1,12 +1,12 @@
-use std::{io::{self, stdout, Result}, os::unix::process};
+use std::{io::{self, stdout, Result}, os::unix::process, thread, time};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::*};
-use crate::processes::*;
-
+use crate::processes::app_data;
+//mod app_data;
 pub enum CurrentScreen{
 	ProcessInfo,
 	Cpu,
@@ -21,18 +21,18 @@ pub enum AppState{
 pub struct App {
 	tab: TabWidget,
 	current_screen: CurrentScreen,
-    screen: Screen,
+    screens: ProcessesScreen,
     footer: FooterWidget,
 	app_state: AppState,
 }
 
 
 impl App {
-	pub fn new() -> App {
+	pub fn new() -> App{
 		App {
 			tab: TabWidget::new(),
 			current_screen: CurrentScreen::ProcessInfo,
-            screen: Screen::,
+            screens: ProcessesScreen::new(),
             footer: FooterWidget::new(),
 			app_state: AppState::Running,
 			//screen_info: processes::Processes.
@@ -90,7 +90,7 @@ impl App {
         {
             //KeyCode::Tab => self.change_tab(),
             KeyCode::Char('q') => self.quit_app(),
-            //KeyCode::Tab => self.change_tab(),
+            KeyCode::Tab => self.change_tab(),
             _ => (),
         };
     }
@@ -98,6 +98,18 @@ impl App {
     fn quit_app(&mut self) 
     {
         self.app_state = AppState::Exiting;
+    }
+
+    fn change_tab(&mut self)
+    {
+        self.tab.update_seleceted_tab();
+        self.current_screen = match self.tab.selcted_tab
+        {
+            0 => CurrentScreen::ProcessInfo,
+            1 => CurrentScreen::Cpu,
+            2 => CurrentScreen::Network,
+            _ => CurrentScreen::ProcessInfo,
+        };
     }
     
 }
@@ -115,7 +127,16 @@ impl <'a> Widget for &'a App
         let [tab_ar, screen_ar, foot_ar] = app_layout.areas(area);
         //Block::new().style(Style::new().bg(Color::Rgb(16, 24, 48))).render(area, buf);
         self.tab.render(tab_ar, buf);
-        Block::bordered().render(screen_ar, buf);
+        //Block::bordered().render(screen_ar, buf);
+        match self.current_screen
+        {
+            CurrentScreen::ProcessInfo => 
+            {
+                ProcessesScreen::new().render(screen_ar, buf);
+            },
+            CurrentScreen::Cpu => self.screens.render(screen_ar, buf),
+            CurrentScreen::Network => self.screens.render(screen_ar, buf),
+        }
         self.footer.render(foot_ar, buf);
     }
 }
@@ -174,6 +195,7 @@ fn ui(frame: &mut Frame) {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 struct TabWidget{
     tabs: [String; 3],
+    selcted_tab: u32
 }
 
 impl TabWidget {
@@ -182,7 +204,13 @@ impl TabWidget {
         TabWidget 
         {
             tabs: [String::from("Processes"), String::from("CPU"), String::from("Network")],
+            selcted_tab: 0,
         }
+    }
+
+    fn update_seleceted_tab(&mut self)
+    {
+        self.selcted_tab = (self.selcted_tab + 1) % 3;
     }
 }
 
@@ -197,7 +225,7 @@ impl <'a> Widget for &'a TabWidget {
         Tabs::new(titles.to_vec())
             .highlight_style(Style::new().fg(Color::Blue).bg(Color::White))
             .block(block::Block::new().borders(Borders::ALL).border_style(Style::new().bg(Color::Red)))
-            .select(0)
+            .select(self.selcted_tab as usize)
             .padding("    ", "    ")
             .divider("|")
             .render(area, buf);
@@ -236,18 +264,73 @@ impl <'a> Widget for &'a FooterWidget {
     }
 }
 
-
-pub struct Screen{
+//#[derive(Debug)]
+pub struct ProcessesScreen{
     //curr_screen: &'a CurrentScreen,
-    screen_info: Processes
+    screen_info: Vec<app_data::Process>,
 }
 
-impl Screen {
-    fn new(screen_type: CurrentScreen) -> Screen
+impl ProcessesScreen {
+    fn new() -> ProcessesScreen
     {
-        SCreen
-        screen_info: Processes::new()
+        ProcessesScreen{
+            //curr_screen: &App::new().current_screen,
+            screen_info: app_data::Processes::new().all_procs
+        }
         
     }
     
+}
+
+impl <'a> Widget for &'a ProcessesScreen {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        //let render_rate = 1;
+        let proc_list = &self.screen_info;
+        let mut rows = Vec::new();
+        let headers = Row::new(["Name", "PID", "Status", "Memory", "CPU"]).style(Style::new().red());
+
+
+
+        for i in proc_list
+        {
+            rows.push(Row::new([
+                    i.name.clone(), 
+                    i.pid.to_string(), 
+                    i.status.clone(), 
+                    i.memory_usage.to_string(), 
+                    i.cpu_usage.to_string()
+                    ]));
+        }
+        let widths = vec![Constraint::Percentage(30), Constraint::Percentage(10), Constraint::Percentage(10), Constraint::Percentage(20), Constraint::Percentage(20)];
+        let style = Style::from((
+            Color::White,   //text
+            Color::Black,   //bg
+            Modifier::BOLD,
+            ));
+        Widget::render(
+            Table::new(rows, widths)
+                .block(Block::default().borders(Borders::ALL).title("Processes"))
+                .header(headers)
+                .style(style),
+            area,
+            buf,
+        );
+        thread::sleep(time::Duration::from_millis(100));
+    }
+}
+
+struct Screens {
+    proc_screen: ProcessesScreen,
+    //cpu_screen: &'a mut CpuScreen,
+    //network_screen: &'a mut NetworkScreen,
+}
+
+impl Screens {
+    fn new() -> Screens {
+        Screens {
+            proc_screen: ProcessesScreen::new(),
+            //cpu_screen,
+            //network_screen,
+        }
+    }
 }
