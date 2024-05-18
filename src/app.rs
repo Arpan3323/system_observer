@@ -22,6 +22,7 @@ pub struct App {
 	tab: TabWidget,
 	current_screen: CurrentScreen,
     screens: ProcessesScreen,
+    process_screen_state: TableState,
     footer: FooterWidget,
 	app_state: AppState,
 }
@@ -33,6 +34,7 @@ impl App {
 			tab: TabWidget::new(),
 			current_screen: CurrentScreen::ProcessInfo,
             screens: ProcessesScreen::new(),
+            process_screen_state: TableState::default(),
             footer: FooterWidget::new(),
 			app_state: AppState::Running,
 			//screen_info: processes::Processes.
@@ -86,13 +88,37 @@ impl App {
 
     fn handle_key_press(&mut self, key: KeyEvent)
     {
-        match key.code
+        match self.current_screen
         {
-            //KeyCode::Tab => self.change_tab(),
-            KeyCode::Char('q') => self.quit_app(),
-            KeyCode::Tab => self.change_tab(),
-            _ => (),
-        };
+            CurrentScreen::ProcessInfo => 
+            {
+                match key.code
+                {
+                    KeyCode::Char('q') => self.quit_app(),
+                    KeyCode::Tab => self.change_tab(),
+                    KeyCode::Down => self.process_screen_state.select(Some(self.process_screen_state.selected().unwrap_or(0) + 1)),
+                    KeyCode::Up => self.process_screen_state.select(Some(self.process_screen_state.selected().unwrap_or(0) - 1)),
+                    _ => {}
+                }
+            },
+            CurrentScreen::Cpu => {
+                match key.code
+                {
+                    KeyCode::Char('q') => self.quit_app(),
+                    KeyCode::Tab => self.change_tab(),
+                    _ => {}
+                }
+            },
+            CurrentScreen::Network => {
+                match key.code
+                {
+                    KeyCode::Char('q') => self.quit_app(),
+                    KeyCode::Tab => self.change_tab(),
+                    _ => {}
+                }
+            },
+            
+        }
     }
 
     fn quit_app(&mut self) 
@@ -114,7 +140,7 @@ impl App {
     
 }
 
-impl <'a> Widget for &'a App
+impl <'a> Widget for &'a mut App
 {
     fn render(self, area: Rect, buf: &mut Buffer)
     {
@@ -132,10 +158,17 @@ impl <'a> Widget for &'a App
         {
             CurrentScreen::ProcessInfo => 
             {
-                ProcessesScreen::new().render(screen_ar, buf);
+                //let mut proc_screen = &mut self.screens;
+                //self.screens.render(screen_ar, buf, &mut self.process_screen_state);
+                ProcessesScreen::new().render(screen_ar, buf, &mut self.process_screen_state);
+
             },
-            CurrentScreen::Cpu => self.screens.render(screen_ar, buf),
-            CurrentScreen::Network => self.screens.render(screen_ar, buf),
+            CurrentScreen::Cpu => {
+                self.screens.render(screen_ar, buf, &mut self.process_screen_state);
+            },//self.screens.render(screen_ar, buf),
+            CurrentScreen::Network => {
+                self.screens.render(screen_ar, buf, &mut self.process_screen_state);
+            }// self.screens.render(screen_ar, buf),
         }
         self.footer.render(foot_ar, buf);
     }
@@ -268,6 +301,7 @@ impl <'a> Widget for &'a FooterWidget {
 pub struct ProcessesScreen{
     //curr_screen: &'a CurrentScreen,
     screen_info: Vec<app_data::Process>,
+    state: TableState,
 }
 
 impl ProcessesScreen {
@@ -275,15 +309,38 @@ impl ProcessesScreen {
     {
         ProcessesScreen{
             //curr_screen: &App::new().current_screen,
-            screen_info: app_data::Processes::new().all_procs
+            screen_info: app_data::Processes::new().all_procs,
+            state: TableState::default(),
         }
         
     }
+
+    fn next(&mut self)
+    {
+        self.state.select(Some(self.state.selected().unwrap_or(0) + 1));
+    }
+
+    fn previous(&mut self)
+    {
+        self.state.select(Some(self.state.selected().unwrap_or(0) - 1));
+    }
+
+    fn select(&mut self, index: usize)
+    {
+        self.state.select(Some(index));
+    }
+
+    fn unselect(&mut self)
+    {
+        self.state.select(None);
+    }
+
     
 }
 
-impl <'a> Widget for &'a ProcessesScreen {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl <'a> StatefulWidget for &'a ProcessesScreen {
+    type State = TableState;
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         //let render_rate = 1;
         let proc_list = &self.screen_info;
         let mut rows = Vec::new();
@@ -307,15 +364,17 @@ impl <'a> Widget for &'a ProcessesScreen {
             Color::Black,   //bg
             Modifier::BOLD,
             ));
-        Widget::render(
+        StatefulWidget::render(
             Table::new(rows, widths)
                 .block(Block::default().borders(Borders::ALL).title("Processes"))
                 .header(headers)
+                .highlight_style(Style::new().red())
                 .style(style),
             area,
             buf,
+            state,
         );
-        thread::sleep(time::Duration::from_millis(100));
+        //thread::sleep(time::Duration::from_millis(100));
     }
 }
 
