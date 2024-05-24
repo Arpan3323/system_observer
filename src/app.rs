@@ -1,12 +1,11 @@
-use std::{io::{self, stdout, Result}, os::unix::process, thread, time};
+use std::{collections::HashMap, io::{stdout, Result}};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use ratatui::{prelude::*, widgets::*};
-use crate::processes::app_data;
-//mod app_data;
+use ratatui::{prelude::*, widgets::{block::Title, *}};
+use crate::processes::app_data::{self, cpu_data::{self}};
 pub enum CurrentScreen{
 	ProcessInfo,
 	Cpu,
@@ -25,11 +24,12 @@ pub struct App {
     process_screen_state: TableState,
     footer: FooterWidget,
 	app_state: AppState,
+    cpu_screen: CpuScreen,
 }
 
 
 impl App {
-	pub fn new() -> App{
+	pub async fn new() -> App{
 		App {
 			tab: TabWidget::new(),
 			current_screen: CurrentScreen::ProcessInfo,
@@ -37,7 +37,7 @@ impl App {
             process_screen_state: TableState::default(),
             footer: FooterWidget::new(),
 			app_state: AppState::Running,
-			//screen_info: processes::Processes.
+            cpu_screen: CpuScreen::new(),
 		}
 	}
 
@@ -47,16 +47,12 @@ impl App {
         stdout().execute(EnterAlternateScreen)?;
         let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
 
-        //let mut should_quit = false;
-
         while self.app_state != AppState::Exiting 
         {
             
             terminal.draw(|frame| 
                 {
                     self.render(frame.size(), frame.buffer_mut());
-                    //frame.render_widget(self, frame.size())
-                    //App::render(*self, frame.size(), frame.buffer_mut());
                 }
 
             )?;
@@ -151,24 +147,15 @@ impl <'a> Widget for &'a mut App
         ]);
                         
         let [tab_ar, screen_ar, foot_ar] = app_layout.areas(area);
-        //Block::new().style(Style::new().bg(Color::Rgb(16, 24, 48))).render(area, buf);
         self.tab.render(tab_ar, buf);
-        //Block::bordered().render(screen_ar, buf);
         match self.current_screen
         {
             CurrentScreen::ProcessInfo => 
-            {
-                //let mut proc_screen = &mut self.screens;
-                //self.screens.render(screen_ar, buf, &mut self.process_screen_state);
-                ProcessesScreen::new().render(screen_ar, buf, &mut self.process_screen_state);
-
-            },
-            CurrentScreen::Cpu => {
-                self.screens.render(screen_ar, buf, &mut self.process_screen_state);
-            },//self.screens.render(screen_ar, buf),
-            CurrentScreen::Network => {
-                self.screens.render(screen_ar, buf, &mut self.process_screen_state);
-            }// self.screens.render(screen_ar, buf),
+                ProcessesScreen::new().render(screen_ar, buf, &mut self.process_screen_state),
+            CurrentScreen::Cpu => 
+                self.cpu_screen.render(screen_ar, buf),
+            CurrentScreen::Network => 
+                self.screens.render(screen_ar, buf, &mut self.process_screen_state),
         }
         self.footer.render(foot_ar, buf);
     }
@@ -249,11 +236,6 @@ impl TabWidget {
 
 impl <'a> Widget for &'a TabWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        //let titles = SelectedTab::iter().map(SelectedTab::title);
-        //self.tabs.push(String::from("Processes"));
-        //select_title = titles as usize;
-        //let highlight_style = (Color::default(), );
-        //let selected_tab_index = self.selected_tab as usize;
         let titles = &self.tabs;
         Tabs::new(titles.to_vec())
             .highlight_style(Style::new().fg(Color::Blue).bg(Color::White))
@@ -300,7 +282,7 @@ impl <'a> Widget for &'a FooterWidget {
 //#[derive(Debug)]
 pub struct ProcessesScreen{
     //curr_screen: &'a CurrentScreen,
-    screen_info: Vec<app_data::Process>,
+    screen_info: Vec<app_data::process_data::Process>,
     state: TableState,
 }
 
@@ -309,7 +291,7 @@ impl ProcessesScreen {
     {
         ProcessesScreen{
             //curr_screen: &App::new().current_screen,
-            screen_info: app_data::Processes::new().all_procs,
+            screen_info: app_data::process_data::Processes::new().all_procs,
             state: TableState::default(),
         }
         
@@ -375,6 +357,125 @@ impl <'a> StatefulWidget for &'a ProcessesScreen {
             state,
         );
         //thread::sleep(time::Duration::from_millis(100));
+    }
+}
+
+struct CpuScreen
+{
+    cpu_info: (f32, usize),
+    sys_info: HashMap<String, String>
+}
+
+impl CpuScreen
+{
+    fn new() -> Self
+    {
+        //let data = cpu_data::cpu_w_data::new().await;
+        //let c_cpu_data = &data.info_per_cpu;
+        Self
+        {
+            cpu_info: cpu_data::fetch_cpu_info(),
+            sys_info: cpu_data::fetch_sys_info()
+        }
+    }
+
+    fn render_widgets(&self, areas: [Rect; 3], buf: &mut Buffer)
+    {
+        let data = Self::new();
+        let ram_data = [&data.sys_info["t_mem"], &data.sys_info["u_mem"]];
+        //cpu util bar
+        let [cpu_ar, ram_ar, info_ar] = areas;
+        let cpu_util_bar_ar = Block::new()
+            .borders(Borders::ALL)
+            .title(Title::from("CPU Utilization (%)").alignment(Alignment::Center))
+            .style(Style::new().bg(Color::Black));
+        let cpu_util_bar = cpu_util_bar_ar.inner(cpu_ar);
+        cpu_util_bar_ar.render(cpu_ar, buf);
+        self.render_cpu_bar(cpu_util_bar, buf, data.cpu_info);
+        
+        //RAM util bar
+        let ram_util_bar_ar = Block::new()
+            .borders(Borders::ALL)
+            .title(Title::from("RAM Utilization (%)").alignment(Alignment::Center))
+            .style(Style::new().bg(Color::Black));
+        let ram_util_bar = ram_util_bar_ar.inner(ram_ar);
+        ram_util_bar_ar.render(ram_ar, buf);
+        self.render_ram_bar(ram_util_bar, buf, ram_data);
+
+        let info = Block::new()
+            .borders(Borders::ALL)
+            .title(Title::from("System Info").alignment(Alignment::Center))
+            .style(Style::new().bg(Color::Black));
+        
+        info.render(info_ar, buf);
+    }
+
+    fn render_cpu_bar(&self, area: Rect, buf: &mut Buffer, util_nums: (f32, usize))
+    {
+        //let time = time::Instant
+        //let util_nums = cpu_w_data::new().avg_util_nums;
+        
+        
+        let cpu_util = util_nums.0 as u16;
+        let cpu_num: String = util_nums.1.to_string();
+        Gauge::default()
+            .block(
+                Block::bordered()
+                .title(String::from("No. of Cores: ") + &cpu_num)
+                .title_alignment(Alignment::Left)
+            )
+            .gauge_style(
+                Style::default()
+                    .fg(Color::Green)
+                    .bg(Color::Black)
+                    .add_modifier(Modifier::ITALIC),
+            )
+            .percent(cpu_util)
+            .render(area, buf);
+    }
+
+    fn render_ram_bar(&self, area: Rect, buf: &mut Buffer, ram_data: [&String; 2])
+    {
+        //let time = time::Instant
+        //let util_nums = cpu_w_data::new().avg_util_nums;
+        
+        
+        let t_mem = ram_data[0];
+        let u_mem = ram_data[1];
+        let ram_util: f32 = (u_mem.clone().parse::<f32>().unwrap() / 
+        t_mem.clone().parse::<f32>().unwrap()) * 100.00;
+        let a_mem = (t_mem.clone().parse::<f32>().unwrap() - u_mem.clone().parse::<f32>().unwrap()).to_string();
+        //let cpu_num: String = util_nums.1.to_string();
+        Gauge::default()
+            .block(Block::bordered().title(String::from("Used Ram (MB): ") 
+            + u_mem + &String::from("    Total Ram (MB): ") + t_mem + &String::from("    Available Ram (MB): ") + &a_mem)
+            .title_alignment(Alignment::Left))
+            .gauge_style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .bg(Color::Black)
+                    .add_modifier(Modifier::ITALIC),
+            )
+            .percent(ram_util as u16)
+            .render(area, buf);
+    }
+
+
+}
+
+impl <'a> Widget for &'a CpuScreen
+{
+    fn render(self, area: Rect, buf: &mut Buffer)
+    {
+        
+        let layout = Layout::vertical(
+            [
+                Constraint::Percentage(40), 
+                Constraint::Percentage(30),
+                Constraint::Fill(1)
+                ]);
+        self.render_widgets(layout.areas(area), buf);
+            
     }
 }
 
