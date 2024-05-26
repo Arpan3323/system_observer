@@ -2,7 +2,7 @@
 //use sysinfo::Pid;
 
 //static sys: sysinfo::System = System::new_all();
-pub mod app_data{
+pub mod backend{
     
     
     pub mod process_data
@@ -20,7 +20,7 @@ pub mod app_data{
 
         pub struct Processes 
         {
-        pub all_procs: Vec<Process>
+            pub all_procs: Vec<Process>
         }
 
 
@@ -64,16 +64,8 @@ pub mod app_data{
         use std::{collections::HashMap, time::Duration};
 
         use sysinfo::{System, RefreshKind,CpuRefreshKind};
-        /*
-        pub struct cpu_w_data 
-        {
-            //RAM
-            pub sys_info: HashMap<String, String>,
-            pub avg_util_nums: (f32, usize),
-        }
-         */
         //info per cpu
-        pub fn fetch_cpu_info() -> (f32, usize)
+        pub fn fetch_cpu_info() -> (f32, usize, u64, String)
         {
             let mut s = System::new_with_specifics(
                 RefreshKind::new().with_cpu(CpuRefreshKind::everything()),
@@ -84,46 +76,92 @@ pub mod app_data{
 
             s.refresh_cpu();
             let cpus = s.cpus();
-            let mut avg_cpu_util: f32 = 0.0;
             let num_cpu: usize = cpus.len();
 
+            let mut avg_cpu_util: f32 = 0.0;
+            let mut avg_freq: u64 = 0;
+            let mut cpu_brand: String = String::new();
             for cpu in cpus
             {
                 avg_cpu_util += cpu.cpu_usage();
+                avg_freq += cpu.frequency();
+                if cpu_brand.is_empty() {
+                    cpu_brand.push_str(cpu.brand());
+                }
             }
             
             //avg
-            if avg_cpu_util > 0.0 && num_cpu > 0 
+            if avg_cpu_util > 0.0 && num_cpu > 0 && avg_freq > 0 
             {
                 avg_cpu_util /= num_cpu as f32;
+                avg_freq /= num_cpu as u64;
             }
-            (avg_cpu_util, num_cpu)
+            
+            (avg_cpu_util, num_cpu, avg_freq, cpu_brand)
         }
 
 
 
 
         //RAM, Kernel version, etc.
-        pub fn fetch_sys_info()  -> HashMap<String, String>
+        pub fn fetch_ram_info()  -> HashMap<String, String>
         {
             let mut s = System::new_all();
             s.refresh_all();
-            let mut sys_info_map = HashMap::new();
+            let mut ram_info = HashMap::new();
             let t_mem = s.total_memory() / 1000000;
             let u_mem = s.used_memory() / 1000000;
-
-            sys_info_map.insert(String::from("t_mem"), t_mem.to_string());
-            sys_info_map.insert(String::from("u_mem"), u_mem.to_string());
-            sys_info_map.insert(String::from("sys_name"), System::name().expect("CPU Data: Error getting sys name"));
-            sys_info_map.insert(String::from("kern_v"), System::kernel_version().expect("CPU Data: Error getting kern v"));
-            sys_info_map.insert(String::from("os_v"), System::os_version().expect("CPU Data: Error getting os v"));
-            sys_info_map.insert(String::from("host_name"),System::host_name().expect("CPU Data: Error getting host name"));
-            //sys_info_map.insert(String::from("host_name"),System::global_cpu_info(&self));
             
+            ram_info.insert(String::from("t_mem"), t_mem.to_string());
+            ram_info.insert(String::from("u_mem"), u_mem.to_string());
+            
+            ram_info
+        }
+
+        pub fn fetch_sys_info() -> HashMap<String, String>
+        {
+            let mut sys_info_map = HashMap::new();
+
+            sys_info_map.insert(String::from("OS Name"), System::name().expect("CPU Data: Error getting sys name"));
+            sys_info_map.insert(String::from("Host Name"),System::host_name().expect("CPU Data: Error getting host name"));
+            sys_info_map.insert(String::from("Kernel Ver."), System::kernel_version().expect("CPU Data: Error getting kern v"));
+            sys_info_map.insert(String::from("OS Ver."), System::os_version().expect("CPU Data: Error getting os v"));
+            sys_info_map.insert(String::from("Uptime"),System::uptime().to_string());
+            sys_info_map.insert(String::from("CPU Architecture"),System::cpu_arch().expect("CPU Data: Error getting arch"));
+
             sys_info_map
         }
 
     }
 
+    pub mod network_data 
+    {
+        use std::collections::HashMap;
+
+        use sysinfo::{NetworkData, Networks};
+
+        pub fn fetch_macs() -> HashMap<String, Vec<String>>
+        {
+            let mut res = HashMap::new();
+            let networks = Networks::new_with_refreshed_list();
+
+            for (interface_n, network) in &networks
+            {
+                let interface_name = "Interface Name: ".to_string() + interface_n;
+
+                let mac_addr = "MAC Address: ".to_string() + &network.mac_address().to_string();
+                let egress = "Total Egress (bytes): ".to_string() + &network.total_transmitted().to_string();
+                let ingress = "Total Ingress (bytes): ".to_string() + &network.total_received().to_string();
+                let pack_out = "Total Packets Out: ".to_string() + &network.total_packets_transmitted().to_string();
+                let pack_in = "Total Packets In: ".to_string() + &network.total_packets_received().to_string();
+
+                let interface_data = vec![
+                    mac_addr, egress, ingress, pack_out, pack_in];
+                res.insert(interface_name, interface_data );
+            }
+            res
+        }
+
+    }
 
 }

@@ -5,7 +5,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::{block::Title, *}};
-use crate::processes::app_data::{self, cpu_data::{self}};
+use crate::processes::backend::{self, cpu_data, network_data};
 pub enum CurrentScreen{
 	ProcessInfo,
 	Cpu,
@@ -25,6 +25,7 @@ pub struct App {
     footer: FooterWidget,
 	app_state: AppState,
     cpu_screen: CpuScreen,
+    net_screen: NetworkScreen,
 }
 
 
@@ -38,6 +39,7 @@ impl App {
             footer: FooterWidget::new(),
 			app_state: AppState::Running,
             cpu_screen: CpuScreen::new(),
+            net_screen: NetworkScreen::new(),
 		}
 	}
 
@@ -155,7 +157,7 @@ impl <'a> Widget for &'a mut App
             CurrentScreen::Cpu => 
                 self.cpu_screen.render(screen_ar, buf),
             CurrentScreen::Network => 
-                self.screens.render(screen_ar, buf, &mut self.process_screen_state),
+                self.net_screen.render(screen_ar, buf)
         }
         self.footer.render(foot_ar, buf);
     }
@@ -282,7 +284,7 @@ impl <'a> Widget for &'a FooterWidget {
 //#[derive(Debug)]
 pub struct ProcessesScreen{
     //curr_screen: &'a CurrentScreen,
-    screen_info: Vec<app_data::process_data::Process>,
+    screen_info: Vec<backend::process_data::Process>,
     state: TableState,
 }
 
@@ -291,33 +293,10 @@ impl ProcessesScreen {
     {
         ProcessesScreen{
             //curr_screen: &App::new().current_screen,
-            screen_info: app_data::process_data::Processes::new().all_procs,
+            screen_info: backend::process_data::Processes::new().all_procs,
             state: TableState::default(),
         }
-        
-    }
-
-    fn next(&mut self)
-    {
-        self.state.select(Some(self.state.selected().unwrap_or(0) + 1));
-    }
-
-    fn previous(&mut self)
-    {
-        self.state.select(Some(self.state.selected().unwrap_or(0) - 1));
-    }
-
-    fn select(&mut self, index: usize)
-    {
-        self.state.select(Some(index));
-    }
-
-    fn unselect(&mut self)
-    {
-        self.state.select(None);
-    }
-
-    
+    }    
 }
 
 impl <'a> StatefulWidget for &'a ProcessesScreen {
@@ -327,8 +306,6 @@ impl <'a> StatefulWidget for &'a ProcessesScreen {
         let proc_list = &self.screen_info;
         let mut rows = Vec::new();
         let headers = Row::new(["Name", "PID", "Status", "Memory", "CPU"]).style(Style::new().red());
-
-
 
         for i in proc_list
         {
@@ -340,12 +317,20 @@ impl <'a> StatefulWidget for &'a ProcessesScreen {
                     i.cpu_usage.to_string()
                     ]));
         }
-        let widths = vec![Constraint::Percentage(30), Constraint::Percentage(10), Constraint::Percentage(10), Constraint::Percentage(20), Constraint::Percentage(20)];
+
+        let widths = vec![
+            Constraint::Percentage(30), 
+            Constraint::Percentage(10), 
+            Constraint::Percentage(10), 
+            Constraint::Percentage(20), 
+            Constraint::Percentage(20)];
+
         let style = Style::from((
             Color::White,   //text
             Color::Black,   //bg
             Modifier::BOLD,
             ));
+
         StatefulWidget::render(
             Table::new(rows, widths)
                 .block(Block::default().borders(Borders::ALL).title("Processes"))
@@ -356,14 +341,15 @@ impl <'a> StatefulWidget for &'a ProcessesScreen {
             buf,
             state,
         );
-        //thread::sleep(time::Duration::from_millis(100));
+
     }
 }
 
 struct CpuScreen
 {
-    cpu_info: (f32, usize),
-    sys_info: HashMap<String, String>
+    cpu_info: (f32, usize, u64, String),
+    ram_info: HashMap<String, String>,
+    sys_info: HashMap<String, String>,
 }
 
 impl CpuScreen
@@ -375,6 +361,7 @@ impl CpuScreen
         Self
         {
             cpu_info: cpu_data::fetch_cpu_info(),
+            ram_info: cpu_data::fetch_ram_info(),
             sys_info: cpu_data::fetch_sys_info()
         }
     }
@@ -382,47 +369,64 @@ impl CpuScreen
     fn render_widgets(&self, areas: [Rect; 3], buf: &mut Buffer)
     {
         let data = Self::new();
-        let ram_data = [&data.sys_info["t_mem"], &data.sys_info["u_mem"]];
+
+        //ram data
+        let ram_data = [&data.ram_info["t_mem"], &data.ram_info["u_mem"]];
+
+        //info data
+        let info_data = data.sys_info;
+        
         //cpu util bar
         let [cpu_ar, ram_ar, info_ar] = areas;
-        let cpu_util_bar_ar = Block::new()
+
+        //render CPU bar
+        let cpu_block = Block::new()
             .borders(Borders::ALL)
             .title(Title::from("CPU Utilization (%)").alignment(Alignment::Center))
-            .style(Style::new().bg(Color::Black));
-        let cpu_util_bar = cpu_util_bar_ar.inner(cpu_ar);
-        cpu_util_bar_ar.render(cpu_ar, buf);
+            .style(Style::new().bg(Color::Black).fg(Color::White));
+        let cpu_util_bar = cpu_block.inner(cpu_ar);
+        cpu_block.render(cpu_ar, buf);
         self.render_cpu_bar(cpu_util_bar, buf, data.cpu_info);
         
-        //RAM util bar
-        let ram_util_bar_ar = Block::new()
+        //render RAM bar
+        let ram_block = Block::new()
             .borders(Borders::ALL)
             .title(Title::from("RAM Utilization (%)").alignment(Alignment::Center))
-            .style(Style::new().bg(Color::Black));
-        let ram_util_bar = ram_util_bar_ar.inner(ram_ar);
-        ram_util_bar_ar.render(ram_ar, buf);
+            .style(Style::new().bg(Color::Black).fg(Color::White));
+        let ram_util_bar = ram_block.inner(ram_ar);
+        ram_block.render(ram_ar, buf);
         self.render_ram_bar(ram_util_bar, buf, ram_data);
 
-        let info = Block::new()
+        //render system info
+        let info_block = Block::new()
             .borders(Borders::ALL)
             .title(Title::from("System Info").alignment(Alignment::Center))
-            .style(Style::new().bg(Color::Black));
-        
-        info.render(info_ar, buf);
+            .style(Style::new().bg(Color::Black).fg(Color::Blue));
+        let info_block_cont_ar = info_block.inner(info_ar);
+        info_block.render(info_ar, buf);
+        self.render_info_cont(info_block_cont_ar, buf, info_data)
     }
 
-    fn render_cpu_bar(&self, area: Rect, buf: &mut Buffer, util_nums: (f32, usize))
+    fn render_cpu_bar(&self, area: Rect, buf: &mut Buffer, util_nums: (f32, usize, u64, String))
     {
         //let time = time::Instant
         //let util_nums = cpu_w_data::new().avg_util_nums;
         
         
         let cpu_util = util_nums.0 as u16;
-        let cpu_num: String = util_nums.1.to_string();
+        let cpu_num = util_nums.1.to_string();
+        let avg_freq = util_nums.2.to_string();
+        let brand_name = util_nums.3;
+
         Gauge::default()
             .block(
                 Block::bordered()
-                .title(String::from("No. of Cores: ") + &cpu_num)
-                .title_alignment(Alignment::Left)
+                .title(Title::from(String::from("No. of Cores: ") + &cpu_num + "     Avg. Frequency (MHz): " + &avg_freq)
+                    .alignment(Alignment::Left)
+                )
+                .title(Title::from(brand_name)
+                    .alignment(Alignment::Right)
+                )
             )
             .gauge_style(
                 Style::default()
@@ -431,15 +435,12 @@ impl CpuScreen
                     .add_modifier(Modifier::ITALIC),
             )
             .percent(cpu_util)
+            .bold()
             .render(area, buf);
     }
 
     fn render_ram_bar(&self, area: Rect, buf: &mut Buffer, ram_data: [&String; 2])
     {
-        //let time = time::Instant
-        //let util_nums = cpu_w_data::new().avg_util_nums;
-        
-        
         let t_mem = ram_data[0];
         let u_mem = ram_data[1];
         let ram_util: f32 = (u_mem.clone().parse::<f32>().unwrap() / 
@@ -457,11 +458,42 @@ impl CpuScreen
                     .add_modifier(Modifier::ITALIC),
             )
             .percent(ram_util as u16)
+            .bold()
             .render(area, buf);
     }
 
+    fn render_info_cont(&self, area: Rect, buf: &mut Buffer, info_data: HashMap<String, String>)
+    {
+        let rows = vec![Row::new(
+            ["OS Name: ".to_string() + &info_data["OS Name"], "OS Version: ".to_string() + &info_data["OS Ver."], "Kernel Version: ".to_string() + &info_data["Kernel Ver."]]
+        ),
+        Row::new(
+            ["Host Name: ".to_string() + &info_data["Host Name"], "Uptime (s): ".to_string() + &info_data["Uptime"], "CPU Architecture: ".to_string() + &info_data["CPU Architecture"]]
+        )];
 
+        let widths = vec![
+            Constraint::Fill(1), 
+            Constraint::Fill(1),
+            Constraint::Fill(1),];
+
+        let style = Style::from((
+            Color::White,   //text
+            Color::Black,   //bg
+            Modifier::BOLD,
+            ));
+
+        Widget::render(
+            Table::new(rows, widths)
+                .block(Block::default().borders(Borders::ALL).style(Color::Magenta))
+                //.header(headers)
+                .highlight_style(Style::new().red())
+                .style(style),
+            area,
+            buf,
+        );
+    }
 }
+
 
 impl <'a> Widget for &'a CpuScreen
 {
@@ -479,18 +511,110 @@ impl <'a> Widget for &'a CpuScreen
     }
 }
 
-struct Screens {
-    proc_screen: ProcessesScreen,
-    //cpu_screen: &'a mut CpuScreen,
-    //network_screen: &'a mut NetworkScreen,
+struct NetworkScreen
+{
+    mac_addrs: HashMap<String, Vec<String>>,
+    //max_interfaces: usize
+
 }
 
-impl Screens {
-    fn new() -> Screens {
-        Screens {
-            proc_screen: ProcessesScreen::new(),
-            //cpu_screen,
-            //network_screen,
+impl NetworkScreen
+{
+    const MAX_INTERFACES: usize = 4;
+
+    pub fn new() -> Self
+    {
+        Self
+        {
+            mac_addrs: network_data::fetch_macs(),
         }
+    }
+
+    pub fn render_widgets(&self, areas: [Rect;2], buf: &mut Buffer)
+    {
+        let [info_ar, graph_ar] = areas;
+        self.render_net_info(info_ar, buf);
+        //self.render_net_graph(graph_ar, buf)
+        //self.render(area, buf)
+        
+    }
+        
+    fn render_net_info(&self, info_ar: Rect, buf: &mut Buffer) 
+    {
+        let info_block = Block::bordered()
+            .style(Style::new().bg(Color::Black).fg(Color::Blue));
+        
+
+        let inner_ar = info_block.inner(info_ar);
+
+        let info_block_layout = Layout::horizontal(
+            [Constraint::Fill(1), Constraint::Fill(1),
+            Constraint::Fill(1), Constraint::Fill(1)]
+        );
+        let inter_info_ar: [Rect; 4] = info_block_layout.areas(inner_ar);
+        info_block.render(info_ar, buf);
+        let mut i = 0;
+        for n in &self.mac_addrs
+        {
+            if i < Self::MAX_INTERFACES
+            {
+                self.render_interface_block(n, inter_info_ar[i], buf);
+                i += 1;
+            }
+        }
+        
+    }
+
+    fn render_interface_block(&self, info: (&String, &Vec<String>), mac_ar: Rect, buf: &mut Buffer) {
+        Widget::render(List::new(info.1.clone())
+            .block(Block::bordered().title(info.0.clone()).bold())
+            .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
+            .highlight_symbol(">>")
+            .repeat_highlight_symbol(true)
+            .style(Style::new().bg(Color::Black).fg(Color::Green)),
+            mac_ar, 
+            buf)
+    }
+
+    fn render_net_graph(&self, area: Rect, buf: &mut Buffer)
+    {
+        let mut data = vec![];
+        for n in &self.mac_addrs
+        {
+            data.push((n.0.as_str(), 2));
+        }
+        //let (name, info) = &self.mac_addrs;
+        BarChart::default()
+            .block(Block::bordered().title("BarChart"))
+            .bar_width(3)
+            .bar_gap(5)
+            .group_gap(10)
+            .bar_style(Style::new().yellow().on_red())
+            .value_style(Style::new().red().bold())
+            .label_style(Style::new().white())
+            .data(&data)
+            .data(BarGroup::default().bars(&[Bar::default().value(10), Bar::default().value(20)]))
+            .max(4)
+            .render(area, buf);
+    }
+    
+    
+}
+
+
+
+impl <'a> Widget for &'a NetworkScreen
+{
+    fn render(self, area: Rect, buf: &mut Buffer)
+    {
+        let layout = Layout::vertical(
+            [     
+                Constraint::Percentage(100),
+                Constraint::Fill(1)
+                ]);
+
+        self.render_widgets(layout.areas(area), buf);
+        
+
     }
 }
