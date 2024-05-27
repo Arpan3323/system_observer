@@ -1,7 +1,9 @@
 
 use std::io::{Result};
 mod app;
-mod processes;
+mod system_info;
+mod ui;
+//mod processes;
 
 use std::{collections::HashMap, time::Duration};
 
