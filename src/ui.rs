@@ -1,6 +1,6 @@
-use std::{collections::HashMap, io::{stdout, Result}};
+use std::collections::HashMap;
 use ratatui::{prelude::*, widgets::{block::Title, *}};
-use crate::system_info::{process_data, cpu_data, network_data};
+use crate::{app::CurrentScreen, system_info::{cpu_data, network_data, process_data}};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct TabWidget{
@@ -38,28 +38,46 @@ impl <'a> Widget for &'a TabWidget {
 }
 
 pub struct FooterWidget{
-    ctrl_text: String,
-    //is_pressed: bool,
+    footer_text: String,
     style: Style,
-    //pressed_style: Option<Style>,
 }
 
-impl FooterWidget {
-    pub fn new() -> FooterWidget
+impl FooterWidget{
+    pub fn new() -> Self
     {
-        FooterWidget 
+        Self 
         {
-            ctrl_text: String::from("Press TAB to change screens"),
-            //is_pressed: false,
+            footer_text: String::from("TAB => Change screens    |    q => Quit    |    Up & Down Arrow Keys => Scroll"),
             style: Style::new().blue(),
-            //pressed_style: None
         }
     }
+
+
+    pub fn update(&mut self, curr_screen: &CurrentScreen)
+    {
+        let cpu_and_net_text = String::from("TAB => Change screens    |    q => Quit     ");
+        let new_style = Style::new().bg(Color::Black).fg(Color::Green);
+        match curr_screen
+        {
+            CurrentScreen::Cpu | CurrentScreen::Network => 
+            {
+                self.footer_text = cpu_and_net_text;
+                self.style = new_style;
+            }
+            CurrentScreen::ProcessInfo =>
+            {
+                self.footer_text = String::from("TAB => Change screens    |    q => Quit    |    Up & Down Arrow Keys => Scroll");
+                self.style = Style::new().bg(Color::Black).fg(Color::Blue);
+            }
+        }
+    }
+
+    
 }
 
 impl <'a> Widget for &'a FooterWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let text = &self.ctrl_text;
+        let text = &self.footer_text;
         Paragraph::new(text.as_str())
             .alignment(Alignment::Center)
             .block(Block::default()
@@ -69,7 +87,6 @@ impl <'a> Widget for &'a FooterWidget {
     }
 }
 
-//#[derive(Debug)]
 pub struct ProcessesScreen{
     //curr_screen: &'a CurrentScreen,
     screen_info: Vec<process_data::Process>,
@@ -82,7 +99,6 @@ impl ProcessesScreen {
     pub fn new() -> ProcessesScreen
     {
         ProcessesScreen{
-            //curr_screen: &App::new().current_screen,
             screen_info: process_data::Processes::new().all_procs,
             state: TableState::default(),
             selected: Some(Self::DEFAULT_SELECTION),
@@ -365,7 +381,6 @@ impl NetworkScreen
         {
             data.push((n.0.as_str(), 2));
         }
-        //let (name, info) = &self.mac_addrs;
         BarChart::default()
             .block(Block::bordered().title("BarChart"))
             .bar_width(3)

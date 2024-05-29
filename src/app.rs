@@ -31,7 +31,7 @@ pub struct App {
 
 
 impl App {
-	pub async fn new() -> App{
+	pub fn new() -> App{
 		App {
 			tab: TabWidget::new(),
 			current_screen: CurrentScreen::ProcessInfo,
@@ -176,13 +176,26 @@ impl <'a> Widget for &'a mut App
         match self.current_screen
         {
             CurrentScreen::ProcessInfo => 
-                ProcessesScreen::new().render(screen_ar, buf, &mut self.process_screen_state),
+            {
+                self.footer.update(&CurrentScreen::ProcessInfo);
+                ProcessesScreen::new().render(screen_ar, buf, &mut self.process_screen_state)
+            }
             CurrentScreen::Cpu => 
-                self.cpu_screen.render(screen_ar, buf),
+            {
+                self.footer.update(&CurrentScreen::Cpu);
+                self.cpu_screen.render(screen_ar, buf)
+            }
             CurrentScreen::Network => 
+            {
+                self.footer.update(&CurrentScreen::Cpu);
+                //self.cpu_screen.render(screen_ar, buf)
                 self.net_screen.render(screen_ar, buf)
+            }
+                //self.net_screen.render(screen_ar, buf)
         }
         self.footer.render(foot_ar, buf);
+        //let current_screen_clone = &self.current_screen;
+        //self.footer.update(&self.current_screen);
     }
 }
 

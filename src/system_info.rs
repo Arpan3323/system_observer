@@ -1,6 +1,6 @@
 pub mod process_data
 {
-    use sysinfo::{System};
+    use sysinfo::System;
     #[derive(Debug)]
     pub struct Process
     {
@@ -49,13 +49,13 @@ pub mod process_data
             all_procs.sort_by(|a,b|b.cpu_usage.partial_cmp(&a.cpu_usage).unwrap());
             all_procs
         }
-        
+
 }
 }
 
 pub mod cpu_data
 {
-    use std::{collections::HashMap, time::Duration};
+    use std::collections::HashMap;
 
     use sysinfo::{System, RefreshKind,CpuRefreshKind};
     //info per cpu
@@ -132,7 +132,7 @@ pub mod network_data
 {
     use std::collections::HashMap;
 
-    use sysinfo::{NetworkData, Networks};
+    use sysinfo::Networks;
 
     pub fn fetch_macs() -> HashMap<String, Vec<String>>
     {
