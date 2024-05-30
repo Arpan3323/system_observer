@@ -1,4 +1,4 @@
-use std::{io::{stdout, Result}, ops::Index};
+use std::io::{stdout, Result};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -22,6 +22,7 @@ pub enum AppState{
 pub struct App {
 	tab: TabWidget,
 	current_screen: CurrentScreen,
+    process_screen: ProcessesScreen,
     process_screen_state: TableState,
     footer: FooterWidget,
 	app_state: AppState,
@@ -34,7 +35,8 @@ impl App {
 	pub fn new() -> App{
 		App {
 			tab: TabWidget::new(),
-			current_screen: CurrentScreen::ProcessInfo,
+			current_screen: CurrentScreen::ProcessInfo,  
+            process_screen: ProcessesScreen::new(),
             process_screen_state: TableState::default(),
             footer: FooterWidget::new(),
 			app_state: AppState::Running,
@@ -126,6 +128,7 @@ impl App {
             Some(index) => if index != 0 {self.process_screen_state.select(Some(index - 1))},
             None => self.process_screen_state.select(Some(0))
         }
+        self.process_screen.selected = self.process_screen_state.selected();
     }
     
     fn move_down(&mut self) 
@@ -136,6 +139,7 @@ impl App {
             Some(index) => self.process_screen_state.select(Some(index + 1)),
             None => self.process_screen_state.select(Some(0))
         }
+        self.process_screen.selected = self.process_screen_state.selected();
         
     }
     

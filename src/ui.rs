@@ -90,8 +90,8 @@ impl <'a> Widget for &'a FooterWidget {
 pub struct ProcessesScreen{
     //curr_screen: &'a CurrentScreen,
     screen_info: Vec<process_data::Process>,
-    state: TableState,
-    selected: Option<usize>
+    pub state: TableState,
+    pub selected: Option<usize>
 }
 
 impl ProcessesScreen {
@@ -334,7 +334,7 @@ impl NetworkScreen
 
     fn render_widgets(&self, areas: [Rect;2], buf: &mut Buffer)
     {
-        let [info_ar, graph_ar] = areas;
+        let [info_ar, _graph_ar] = areas;
         self.render_net_info(info_ar, buf);
     }
         
@@ -374,6 +374,8 @@ impl NetworkScreen
             buf)
     }
 
+    /*
+    * Not good enough
     fn render_net_graph(&self, area: Rect, buf: &mut Buffer)
     {
         let mut data = vec![];
@@ -394,6 +396,7 @@ impl NetworkScreen
             .max(4)
             .render(area, buf);
     }
+     */
     
     
 }
