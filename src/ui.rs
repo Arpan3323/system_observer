@@ -47,7 +47,7 @@ impl FooterWidget{
     {
         Self 
         {
-            footer_text: String::from("TAB => Change screens    |    q => Quit    |    Up & Down Arrow Keys => Scroll"),
+            footer_text: String::from("TAB => Change screens    |    'q' or 'Q' => Quit    |    Up & Down Arrow Keys => Scroll"),
             style: Style::new().blue(),
         }
     }
@@ -55,7 +55,7 @@ impl FooterWidget{
 
     pub fn update(&mut self, curr_screen: &CurrentScreen)
     {
-        let cpu_and_net_text = String::from("TAB => Change screens    |    q => Quit     ");
+        let cpu_and_net_text = String::from("TAB => Change screens    |    q  or 'Q' => Quit     ");
         let new_style = Style::new().bg(Color::Black).fg(Color::Green);
         match curr_screen
         {
@@ -66,7 +66,7 @@ impl FooterWidget{
             }
             CurrentScreen::ProcessInfo =>
             {
-                self.footer_text = String::from("TAB => Change screens    |    q => Quit    |    Up & Down Arrow Keys => Scroll");
+                self.footer_text = String::from("TAB => Change screens    |    'q' or 'Q' => Quit    |    Up & Down Arrow Keys => Scroll");
                 self.style = Style::new().bg(Color::Black).fg(Color::Blue);
             }
         }

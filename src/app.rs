@@ -1,4 +1,4 @@
-use std::io::{stdout, Result};
+use std::{io::{stdout, Result}, ops::Index};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -92,7 +92,7 @@ impl App {
             {
                 match key.code
                 {
-                    KeyCode::Char('q') => self.quit_app(),
+                    KeyCode::Char('q' | 'Q') => self.quit_app(),
                     KeyCode::Tab => self.change_tab(),
                     KeyCode::Down => self.move_down(),
                     KeyCode::Up => self.move_up(),
@@ -120,26 +120,23 @@ impl App {
     }
 
     fn move_up(&mut self) {
-        let selected = self.process_screen_state.selected().unwrap_or(0);
-        if selected >0
+        let selected = self.process_screen_state.selected();
+        match selected
         {
-            self.process_screen_state.select(Some(self.process_screen_state.selected().unwrap_or(0) - 1));
-        }
-        else{
-            self.process_screen_state.select(Some(0));
+            Some(index) => if index != 0 {self.process_screen_state.select(Some(index - 1))},
+            None => self.process_screen_state.select(Some(0))
         }
     }
     
     fn move_down(&mut self) 
     {
-        let selected = self.process_screen_state.selected().unwrap_or(0);
-        if selected == 0 || selected > 0  
+        let selected = self.process_screen_state.selected();
+        match selected
         {
-            self.process_screen_state.select(Some(self.process_screen_state.selected().unwrap_or(0) + 1));
+            Some(index) => self.process_screen_state.select(Some(index + 1)),
+            None => self.process_screen_state.select(Some(0))
         }
-        else{
-            self.process_screen_state.select(Some(0));
-        }
+        
     }
     
     fn quit_app(&mut self) 
