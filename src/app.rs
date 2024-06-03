@@ -189,7 +189,7 @@ impl <'a> Widget for &'a mut App
             }
             CurrentScreen::Network => 
             {
-                self.footer.update(&CurrentScreen::Cpu);
+                self.footer.update(&CurrentScreen::Network);
                 //self.cpu_screen.render(screen_ar, buf)
                 self.net_screen.render(screen_ar, buf)
             }

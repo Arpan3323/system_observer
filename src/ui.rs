@@ -47,8 +47,8 @@ impl FooterWidget{
     {
         Self 
         {
-            footer_text: String::from("TAB => Change screens    |    'q' or 'Q' => Quit    |    Up & Down Arrow Keys => Scroll"),
-            style: Style::new().blue(),
+            footer_text: String::from("TAB => Change screens    |    'q' or 'Q' => Quit    |    Up & Down Arrow Keys => Scroll    |    'k' or 'K' => Kill"),
+            style: Style::new().bg(Color::Black).fg(Color::Red),
         }
     }
 
@@ -56,18 +56,25 @@ impl FooterWidget{
     pub fn update(&mut self, curr_screen: &CurrentScreen)
     {
         let cpu_and_net_text = String::from("TAB => Change screens    |    q  or 'Q' => Quit     ");
-        let new_style = Style::new().bg(Color::Black).fg(Color::Green);
+        //let new_style = Style::new().bg(Color::Black).fg(Color::Green);
         match curr_screen
         {
-            CurrentScreen::Cpu | CurrentScreen::Network => 
+            CurrentScreen::Cpu => 
             {
                 self.footer_text = cpu_and_net_text;
-                self.style = new_style;
+                self.style = Style::new().bg(Color::Black).fg(Color::Blue);
+            }
+            CurrentScreen::Network => 
+            {
+
+                self.footer_text = cpu_and_net_text;
+                self.style = Style::new().bg(Color::Black).fg(Color::Green);
+
             }
             CurrentScreen::ProcessInfo =>
             {
-                self.footer_text = String::from("TAB => Change screens    |    'q' or 'Q' => Quit    |    Up & Down Arrow Keys => Scroll");
-                self.style = Style::new().bg(Color::Black).fg(Color::Blue);
+                self.footer_text = String::from("TAB => Change screens    |    'q' or 'Q' => Quit    |    Up & Down Arrow Keys => Scroll    |    'k' or 'K' => Kill");
+                self.style = Style::new().bg(Color::Black).fg(Color::Red);
             }
         }
     }
@@ -119,7 +126,7 @@ impl <'a> StatefulWidget for &'a ProcessesScreen {
         //let render_rate = 1;
         let proc_list = &self.screen_info.all_procs;
         let mut rows = Vec::new();
-        let headers = Row::new(["Name", "PID", "Status", "Memory", "CPU"]).style(Style::new().red());
+        let headers = Row::new(["Name", "PID", "Status", "Memory", "% CPU"]).style(Style::new().red());
 
         for i in proc_list
         {
@@ -127,7 +134,7 @@ impl <'a> StatefulWidget for &'a ProcessesScreen {
                     i.name.clone(), 
                     i.pid.to_string(), 
                     i.status.clone(), 
-                    i.memory_usage.to_string(), 
+                    i.memory_usage.to_string() + " MB", 
                     i.cpu_usage.to_string()
                     ]));
         }
@@ -149,7 +156,7 @@ impl <'a> StatefulWidget for &'a ProcessesScreen {
             Table::new(rows, widths)
                 .block(Block::default().borders(Borders::ALL).title("Processes"))
                 .header(headers)
-                .highlight_style(Style::new().red())
+                .highlight_style(Style::new().bg(Color::White).fg(Color::Red))
                 .style(style),
             area,
             buf,
