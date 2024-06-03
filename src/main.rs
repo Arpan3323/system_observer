@@ -1,10 +1,15 @@
-use std::io::Result;
+use std::{io::Result, sync::Arc};
+
+use sysinfo::Process;
+use system_info::process_data::Processes;
 mod app;
 mod system_info;
 mod ui;
 
 fn main() -> Result<()>
 {
+    //let shared_proc_info: Arc<Processes> = Arc::new(Processes::new());
+    //let my_arc_struct: Arc<MyStruct> = Arc::new(my_struct);
     app::App::new().run()?;
     Ok(())
 }

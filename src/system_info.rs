@@ -1,11 +1,11 @@
 pub mod process_data
 {
-    use sysinfo::System;
+    use sysinfo::{Pid, System};
     #[derive(Debug)]
     pub struct Process
     {
         pub name: String,
-        pub pid: u32,
+        pub pid: Pid,
         pub status: String,
         pub memory_usage: u64,
         pub cpu_usage: f32,
@@ -27,6 +27,17 @@ pub mod process_data
             }
         }
 
+        pub fn kill_proc(&self, selected_table_index: usize)
+        {
+            use sysinfo::{Pid, System};
+
+            let s = System::new_all();
+            if let Some(process) = s.process(self.all_procs[selected_table_index].pid) 
+            {
+                process.kill();
+            }
+        }
+
         fn get_all_procs() -> Vec<Process> 
         {
             let mut sys = System::new_all();
@@ -37,7 +48,7 @@ pub mod process_data
             {
                 let curr_proc = Process {
                     name: process.name().to_string(),
-                    pid: pid.as_u32(),
+                    pid: pid.to_owned(),
                     status: process.status().to_string(),
                     memory_usage: process.memory() / 1000000,
                     cpu_usage: process.cpu_usage(),
@@ -49,6 +60,7 @@ pub mod process_data
             all_procs.sort_by(|a,b|b.cpu_usage.partial_cmp(&a.cpu_usage).unwrap());
             all_procs
         }
+
 
 }
 }

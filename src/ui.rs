@@ -103,7 +103,8 @@ impl ProcessesScreen {
             state: TableState::default(),
             selected: Some(Self::DEFAULT_SELECTION),
         }
-    }    
+    }
+    
 }
 
 impl <'a> StatefulWidget for &'a ProcessesScreen {

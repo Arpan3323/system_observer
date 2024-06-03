@@ -5,7 +5,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::*};
-use crate::ui::*;
+use crate::{system_info::process_data, ui::*};
 
 //mod processes;
 pub enum CurrentScreen{
@@ -98,13 +98,14 @@ impl App {
                     KeyCode::Tab => self.change_tab(),
                     KeyCode::Down => self.move_down(),
                     KeyCode::Up => self.move_up(),
+                    KeyCode::Char('k' | 'K') => self.kill_by_pid(),
                     _ => {}
                 }
             },
             CurrentScreen::Cpu => {
                 match key.code
                 {
-                    KeyCode::Char('q') => self.quit_app(),
+                    KeyCode::Char('q' | 'Q') => self.quit_app(),
                     KeyCode::Tab => self.change_tab(),
                     _ => {}
                 }
@@ -112,7 +113,7 @@ impl App {
             CurrentScreen::Network => {
                 match key.code
                 {
-                    KeyCode::Char('q') => self.quit_app(),
+                    KeyCode::Char('q' | 'Q') => self.quit_app(),
                     KeyCode::Tab => self.change_tab(),
                     _ => {}
                 }
@@ -159,6 +160,14 @@ impl App {
             _ => CurrentScreen::ProcessInfo,
         };
     }
+
+    fn kill_by_pid(&mut self)
+    {
+        use process_data::Processes; 
+        let proc_vec = Processes::new();
+        proc_vec.kill_proc(self.process_screen.selected.unwrap());
+
+    }
     
 }
 
@@ -179,7 +188,7 @@ impl <'a> Widget for &'a mut App
             CurrentScreen::ProcessInfo => 
             {
                 self.footer.update(&CurrentScreen::ProcessInfo);
-                ProcessesScreen::new().render(screen_ar, buf, &mut self.process_screen_state)
+                self.process_screen.render(screen_ar, buf, &mut self.process_screen_state)
             }
             CurrentScreen::Cpu => 
             {
@@ -199,4 +208,3 @@ impl <'a> Widget for &'a mut App
         //self.footer.update(&self.current_screen);
     }
 }
-
