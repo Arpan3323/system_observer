@@ -8,18 +8,21 @@ use ratatui::{prelude::*, widgets::*};
 use crate::ui::*;
 
 //mod processes;
-pub enum CurrentScreen{
+pub enum CurrentScreen
+{
 	ProcessInfo,
 	Cpu,
 	Network,
 }
 #[derive(PartialEq)]
-pub enum AppState{
+pub enum AppState
+{
 	Running,
 	Exiting,
 }
 
-pub struct App {
+pub struct App 
+{
 	tab: TabWidget,
 	current_screen: CurrentScreen,
     process_screen: ProcessesScreen,
@@ -33,7 +36,8 @@ pub struct App {
 
 impl App {
 	pub fn new() -> App{
-		App {
+		App 
+        {
 			tab: TabWidget::new(),
 			current_screen: CurrentScreen::ProcessInfo,  
             process_screen: ProcessesScreen::new(),
