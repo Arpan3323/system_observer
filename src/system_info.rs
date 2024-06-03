@@ -27,20 +27,24 @@ pub mod process_data
             }
         }
 
-        pub fn kill_proc(&self, selected_table_index: usize)
+        pub fn kill_proc(&mut self, selected_table_index: usize)
         {
-            use sysinfo::{Pid, System};
+            //use sysinfo::{Pid, System};
 
             let s = System::new_all();
             if let Some(process) = s.process(self.all_procs[selected_table_index].pid) 
             {
                 process.kill();
             }
+
+            self.all_procs = Self::get_all_procs(); //imitate a refresh
         }
 
         fn get_all_procs() -> Vec<Process> 
         {
             let mut sys = System::new_all();
+            //dividing cpu usage per proc by number of cpus to get a val b/w 0% to 100&
+            let cpu_num = sys.cpus().len() as f32;
             let mut all_procs: Vec<Process> = Vec::new();
             sys.refresh_all();
             sys.refresh_all();
@@ -51,7 +55,7 @@ pub mod process_data
                     pid: pid.to_owned(),
                     status: process.status().to_string(),
                     memory_usage: process.memory() / 1000000,
-                    cpu_usage: process.cpu_usage(),
+                    cpu_usage: process.cpu_usage() / cpu_num,
                 };
                 all_procs.push(curr_proc);
             }

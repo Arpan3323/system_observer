@@ -5,7 +5,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::*};
-use crate::{system_info::process_data, ui::*};
+use crate::ui::*;
 
 //mod processes;
 pub enum CurrentScreen{
@@ -98,7 +98,7 @@ impl App {
                     KeyCode::Tab => self.change_tab(),
                     KeyCode::Down => self.move_down(),
                     KeyCode::Up => self.move_up(),
-                    KeyCode::Char('k' | 'K') => self.kill_by_pid(),
+                    KeyCode::Char('k' | 'K') => self.process_screen.kill_by_pid(),
                     _ => {}
                 }
             },
@@ -159,14 +159,6 @@ impl App {
             2 => CurrentScreen::Network,
             _ => CurrentScreen::ProcessInfo,
         };
-    }
-
-    fn kill_by_pid(&mut self)
-    {
-        use process_data::Processes; 
-        let proc_vec = Processes::new();
-        proc_vec.kill_proc(self.process_screen.selected.unwrap());
-
     }
     
 }

@@ -89,7 +89,7 @@ impl <'a> Widget for &'a FooterWidget {
 
 pub struct ProcessesScreen{
     //curr_screen: &'a CurrentScreen,
-    screen_info: Vec<process_data::Process>,
+    screen_info: process_data::Processes,
     pub state: TableState,
     pub selected: Option<usize>
 }
@@ -99,10 +99,16 @@ impl ProcessesScreen {
     pub fn new() -> ProcessesScreen
     {
         ProcessesScreen{
-            screen_info: process_data::Processes::new().all_procs,
+            screen_info: process_data::Processes::new(),
             state: TableState::default(),
             selected: Some(Self::DEFAULT_SELECTION),
         }
+    }
+
+    pub fn kill_by_pid(&mut self)
+    {
+        self.screen_info.kill_proc(self.selected.unwrap());
+
     }
     
 }
@@ -111,7 +117,7 @@ impl <'a> StatefulWidget for &'a ProcessesScreen {
     type State = TableState;
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         //let render_rate = 1;
-        let proc_list = &self.screen_info;
+        let proc_list = &self.screen_info.all_procs;
         let mut rows = Vec::new();
         let headers = Row::new(["Name", "PID", "Status", "Memory", "CPU"]).style(Style::new().red());
 
@@ -374,31 +380,6 @@ impl NetworkScreen
             mac_ar, 
             buf)
     }
-
-    /*
-    * Not good enough
-    fn render_net_graph(&self, area: Rect, buf: &mut Buffer)
-    {
-        let mut data = vec![];
-        for n in &self.mac_addrs
-        {
-            data.push((n.0.as_str(), 2));
-        }
-        BarChart::default()
-            .block(Block::bordered().title("BarChart"))
-            .bar_width(3)
-            .bar_gap(5)
-            .group_gap(10)
-            .bar_style(Style::new().yellow().on_red())
-            .value_style(Style::new().red().bold())
-            .label_style(Style::new().white())
-            .data(&data)
-            .data(BarGroup::default().bars(&[Bar::default().value(10), Bar::default().value(20)]))
-            .max(4)
-            .render(area, buf);
-    }
-     */
-    
     
 }
 
