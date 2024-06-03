@@ -1,7 +1,7 @@
 # System Observer
 A cross-platform Terminal User Interface (TUI) written in Rust
 
-<img src="/docs/sys-obs-demo-gif.gif" width="950" height="600"/>
+<img src="/docs/sys-obs-demo-gif.gif" width="900" height="600"/>
 
 This application uses the following Crates:
 - [crossterm](https://docs.rs/crossterm/latest/crossterm/): Creates a cross-platform text-based terminal interface with a mutable buffer that can be manipulated and re-used for rendering. This crate is also used to handle key inputs via `event` module.
