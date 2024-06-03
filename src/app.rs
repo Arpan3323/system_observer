@@ -25,27 +25,27 @@ pub struct App
 {
 	tab: TabWidget,
 	current_screen: CurrentScreen,
-    process_screen: ProcessesScreen,
-    process_screen_state: TableState,
-    footer: FooterWidget,
+    	process_screen: ProcessesScreen,
+    	process_screen_state: TableState,
+    	footer: FooterWidget,
 	app_state: AppState,
-    cpu_screen: CpuScreen,
-    net_screen: NetworkScreen,
+    	cpu_screen: CpuScreen,
+    	net_screen: NetworkScreen,
 }
 
 
 impl App {
 	pub fn new() -> App{
 		App 
-        {
+		{
 			tab: TabWidget::new(),
 			current_screen: CurrentScreen::ProcessInfo,  
-            process_screen: ProcessesScreen::new(),
-            process_screen_state: TableState::default(),
-            footer: FooterWidget::new(),
+            		process_screen: ProcessesScreen::new(),
+            		process_screen_state: TableState::default(),
+            		footer: FooterWidget::new(),
 			app_state: AppState::Running,
-            cpu_screen: CpuScreen::new(),
-            net_screen: NetworkScreen::new(),
+            		cpu_screen: CpuScreen::new(),
+            		net_screen: NetworkScreen::new(),
 		}
 	}
 
@@ -197,10 +197,7 @@ impl <'a> Widget for &'a mut App
                 //self.cpu_screen.render(screen_ar, buf)
                 self.net_screen.render(screen_ar, buf)
             }
-                //self.net_screen.render(screen_ar, buf)
         }
         self.footer.render(foot_ar, buf);
-        //let current_screen_clone = &self.current_screen;
-        //self.footer.update(&self.current_screen);
     }
 }
