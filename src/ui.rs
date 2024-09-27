@@ -403,3 +403,22 @@ impl <'a> Widget for &'a NetworkScreen
         self.render_widgets(layout.areas(area), buf);
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test001_tab_widget_init() {
+        use crate::ui::*;
+        let result = TabWidget::new();
+        assert!(result.tabs.len() == 3, "length TabWidget tabs is incorrect!");
+        assert!(result.selcted_tab == 0, "TabWidget selected_tab is incorrect!");
+    }
+
+    #[test]
+    fn test002_cpu_screen_init() {
+        use crate::ui::*;
+        let result = CpuScreen::new();
+        assert!(std::mem::size_of_val(&result) != 0, "CpuScreen data not initializes");
+    }
+}
