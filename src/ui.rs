@@ -406,10 +406,14 @@ impl <'a> Widget for &'a NetworkScreen
 
 #[cfg(test)]
 mod tests {
-
+    /*
+    * Happy path tests: starts with 0
+    * Sad path tests: starts with 1
+    * Evil path tests: start with 9
+    */
     #[test]
     fn test001_tab_widget_init() {
-        use crate::ui::*;
+        use crate::ui::TabWidget;
         let result = TabWidget::new();
         assert!(result.tabs.len() == 3, "length TabWidget tabs is incorrect!");
         assert!(result.selcted_tab == 0, "TabWidget selected_tab is incorrect!");
@@ -417,7 +421,7 @@ mod tests {
 
     #[test]
     fn test002_cpu_screen_init() {
-        use crate::ui::*;
+        use crate::ui::CpuScreen;
         let result = CpuScreen::new();
         assert!(std::mem::size_of_val(&result) != 0, "CpuScreen data not initializes");
     }
