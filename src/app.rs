@@ -7,7 +7,6 @@ use crossterm::{
 use ratatui::{prelude::*, widgets::*};
 use crate::ui::*;
 
-//mod processes;
 pub enum CurrentScreen
 {
 	ProcessInfo,
@@ -25,12 +24,12 @@ pub struct App
 {
 	tab: TabWidget,
 	current_screen: CurrentScreen,
-    	process_screen: ProcessesScreen,
-    	process_screen_state: TableState,
-    	footer: FooterWidget,
+    process_screen: ProcessesScreen,
+    process_screen_state: TableState,
+    footer: FooterWidget,
 	app_state: AppState,
-    	cpu_screen: CpuScreen,
-    	net_screen: NetworkScreen,
+    cpu_screen: CpuScreen,
+    net_screen: NetworkScreen,
 }
 
 
@@ -40,12 +39,12 @@ impl App {
 		{
 			tab: TabWidget::new(),
 			current_screen: CurrentScreen::ProcessInfo,  
-            		process_screen: ProcessesScreen::new(),
-            		process_screen_state: TableState::default(),
-            		footer: FooterWidget::new(),
+            process_screen: ProcessesScreen::new(),
+            process_screen_state: TableState::default(),
+            footer: FooterWidget::new(),
 			app_state: AppState::Running,
-            		cpu_screen: CpuScreen::new(),
-            		net_screen: NetworkScreen::new(),
+            cpu_screen: CpuScreen::new(),
+            net_screen: NetworkScreen::new(),
 		}
 	}
 
@@ -60,7 +59,7 @@ impl App {
             
             terminal.draw(|frame| 
                 {
-                    self.render(frame.size(), frame.buffer_mut());
+                    self.render(frame.area(), frame.buffer_mut());
                 }
 
             )?;

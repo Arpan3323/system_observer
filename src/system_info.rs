@@ -50,14 +50,18 @@ pub mod process_data
             sys.refresh_all();
             for (pid, process)in sys.processes() 
             {
-                let curr_proc = Process {
-                    name: process.name().to_string(),
-                    pid: pid.to_owned(),
-                    status: process.status().to_string(),
-                    memory_usage: process.memory() / 1000000,
-                    cpu_usage: process.cpu_usage() / cpu_num,
-                };
-                all_procs.push(curr_proc);
+                if process.name().to_string() != "system-observer" &&
+                process.name().to_string() != "system_observer"
+                {
+                    let curr_proc = Process {
+                        name: process.name().to_string(),
+                        pid: pid.to_owned(),
+                        status: process.status().to_string(),
+                        memory_usage: process.memory() / 1000000,
+                        cpu_usage: process.cpu_usage() / cpu_num,
+                    };
+                    all_procs.push(curr_proc);
+                }
             }
             
             //all_procs.sort_by(|a,b|b.cmp(a));
@@ -80,7 +84,7 @@ pub mod cpu_data
         let mut s = System::new_with_specifics(
             RefreshKind::new().with_cpu(CpuRefreshKind::everything()),
         );
-        
+        s.refresh_cpu();
         // Wait a bit because CPU usage is based on diff.
         std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
 
@@ -101,9 +105,8 @@ pub mod cpu_data
         }
         
         //avg
-        if avg_cpu_util > 0.0 && num_cpu > 0 && avg_freq > 0 
+        if num_cpu > 0 && avg_freq > 0 
         {
-            avg_cpu_util /= num_cpu as f32;
             avg_freq /= num_cpu as u64;
         }
         
@@ -172,4 +175,23 @@ pub mod network_data
         res
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    /*
+    * Happy path tests: starts with 0
+    * Sad path tests: starts with 1
+    * Evil path tests: start with 9
+    */
+    #[test]
+    fn test101_exclude_app_name() {
+        use crate::system_info::process_data::Processes;
+        let result = Processes::new();
+        for proc in result.all_procs
+        {
+            assert_ne!(proc.name, "system_observer");
+            assert_ne!(proc.name, "system-observer");
+        }
+    }
 }
