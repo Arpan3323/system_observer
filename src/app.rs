@@ -59,7 +59,7 @@ impl App {
             
             terminal.draw(|frame| 
                 {
-                    self.render(frame.size(), frame.buffer_mut());
+                    self.render(frame.area(), frame.buffer_mut());
                 }
 
             )?;
